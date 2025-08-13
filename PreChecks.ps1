@@ -1,5 +1,3 @@
-﻿
-
 Function Get-DesktopPC
 {
  $isDesktop = $true
@@ -46,11 +44,29 @@ Function Get-WSLEnabled {
 }
 
 Function Get-VMGpuPartitionAdapterFriendlyName {
-    $Devices = (Get-WmiObject -Class "Msvm_PartitionableGpu" -ComputerName $env:COMPUTERNAME -Namespace "ROOT\virtualization\v2").name
-    Foreach ($GPU in $Devices) {
-        $GPUParse = $GPU.Split('#')[1]
-        Get-WmiObject Win32_PNPSignedDriver | where {($_.HardwareID -eq "PCI\$GPUParse")} | select DeviceName -ExpandProperty DeviceName
+    try {
+        # First try to get partitionable GPUs from Hyper-V namespace
+        $Devices = (Get-WmiObject -Class "Msvm_PartitionableGpu" -ComputerName $env:COMPUTERNAME -Namespace "ROOT\virtualization\v2" -ErrorAction Stop).name
+        if ($Devices) {
+            Foreach ($GPU in $Devices) {
+                $GPUParse = $GPU.Split('#')[1]
+                Get-WmiObject Win32_PNPSignedDriver | where {($_.HardwareID -eq "PCI\$GPUParse")} | select DeviceName -ExpandProperty DeviceName
+            }
         }
+    }
+    catch {
+        Write-Warning "Unable to access Hyper-V GPU partitioning namespace. This may indicate:"
+        Write-Warning "1. Hyper-V is not fully installed or configured"
+        Write-Warning "2. GPU partitioning feature is not available"
+        Write-Warning "3. Administrative privileges are required"
+        Write-Warning ""
+        Write-Warning "Attempting to list all discrete GPUs instead..."
+        
+        # Fallback: List all discrete GPU devices
+        Get-WmiObject Win32_VideoController | 
+            Where-Object { $_.Name -notlike "*Basic*" -and $_.Name -notlike "*Generic*" -and $_.PNPDeviceID -like "PCI\VEN_*" } |
+            Select-Object -ExpandProperty Name
+    }
 }
 
 If ((Get-DesktopPC) -and  (Get-WindowsCompatibleOS) -and (Get-HyperVEnabled)) {

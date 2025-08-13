@@ -57,10 +57,10 @@ Function Get-VMGpuPartitionAdapterFriendlyName {
     catch {
         Write-Warning "Unable to access Hyper-V GPU partitioning namespace. This may indicate:"
         Write-Warning "1. Hyper-V is not fully installed or configured"
-        Write-Warning "2. GPU partitioning feature is not available"
-        Write-Warning "3. Administrative privileges are required"
+        Write-Warning "Run this command in PowerShell:"
+        Write-Warning "DISM /Online /Enable-Feature /All /FeatureName:Microsoft-Hyper-V"
         Write-Warning ""
-        Write-Warning "Attempting to list all discrete GPUs instead..."
+        Write-Warning "After this restart your computer and run this script again"
         
         # Fallback: List all discrete GPU devices
         Get-WmiObject Win32_VideoController | 
